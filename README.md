@@ -58,8 +58,11 @@ With compiler's optimization flags (`-O2`)
 # Testing Machine
 
 MBP mid-2012 
+
 macOS mojave 10.14 (18A391) 
+
 RAM 8 GB 1600 MHz DDR3 
+
 Processor 2.5 GHz Intel Core i5
 
 Note: gcc is in fact clang with gcc frontend
