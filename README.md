@@ -62,9 +62,11 @@ It will finally summarize the results for test cases.
 Results as collected via `bash collect.sh`.
 
 * Result as tested on macOS (see spec on _Testing Machine_)
+
 ![result on macOS](https://github.com/haxpor/sse-bench/blob/master/result.png)
 
 * Result as tested on Linux Ubuntu 18.04 (see spec on _Testing Machine_)
+
 ![result on linux](https://github.com/haxpor/sse-bench/blob/master/result-linux.png)
 
 # Testing Machine
