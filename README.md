@@ -61,10 +61,15 @@ It will finally summarize the results for test cases.
 
 Results as collected via `bash collect.sh`.
 
-![result](https://github.com/haxpor/sse-bench/blob/master/result.png)
+* Result as tested on macOS (see spec on _Testing Machine_)
+![result on macOS](https://github.com/haxpor/sse-bench/blob/master/result.png)
+
+* Result as tested on Linux Ubuntu 18.04 (see spec on _Testing Machine_)
+![result on linux](https://github.com/haxpor/sse-bench/blob/master/result-linux.png)
 
 # Testing Machine
 
+## macOS
 MBP mid-2012 
 
 macOS mojave 10.14 (18A391) 
@@ -74,6 +79,11 @@ RAM 8 GB 1600 MHz DDR3
 Processor 2.5 GHz Intel Core i5
 
 Note: gcc is in fact clang with gcc frontend
+
+## Linux Ubuntu 18.04
+
+CPU Xeon E3-12xx v2 (ivy bridge) 2.2 GHz with 1 GB of RAM.
+1 core with hyperthreading. VM.
 
 # Reference
 
