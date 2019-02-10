@@ -67,5 +67,9 @@ Processor 2.5 GHz Intel Core i5
 
 Note: gcc is in fact clang with gcc frontend
 
+# Reference
+
+- [Modern compiler will auto-vectorize code as per optimization applied](https://stackoverflow.com/a/50786881/571227) - this might answer the result from above that code with / without SSE perform similar the same at `-O2` optimization level.
+
 # License
 MIT, Wasin Thonkaew
