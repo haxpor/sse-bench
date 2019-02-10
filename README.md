@@ -4,7 +4,7 @@ Benchmark for code with/without SSE for initialization and math operations
 # How?
 
 You can look at the benchmark implementation inside `ssebench.c`.
-Basically, it operates on float array with 10M+4 elements (intended to make it multiple of 4 perfectly for SSE).
+Basically, it operates on float array with 10M+8 elements (intended to make it multiple of 4 perfectly for SSE and AVX whichever one is available but preferred AVX).
 
 Preprocessor check added in case your machine has no SSE support, thus it will print relevant message then quit.
 
@@ -13,17 +13,25 @@ Benchmark spans into 2 categories
 1. Initialization
 2. Math operations
 
-Each test against code with / without SSE to compare performance.
+Each test against code with / without SSE/AVX to compare performance.
 
 It executes each categories in sequence for 100 iterations, then I sum up execution time for each round for each of type then divide by 100. Result is in `ms` (millsecond).
 
 As well, variables are made sure to be aligned in memory allocation (16-bytes alignment) to satisfy SSE 128-bit instruction.
 
-# Collect Result
+# Build & Collect Result
 
 As from test, I compiled and built the program with and without optimization flags.
+Also we need to produce result from SSE, and AVX separately.
 
-with `gcc ssebench.c -o ssebench`, and another with `gcc ssebench.c -O2 -o ssebench-optimized`
+Do it like this
+
+1. Compile to get result from SSE via `gcc ssebench.c` with / without optimization flags.
+2. Compile to get result from AVX via `gcc ssebench.c -mavx` with / without optimization flags.
+
+> To be able to have AVX support, not just processor needs to support, but also we need to supply compilation flag of `-mavx`. So we will have `__AVX__` defined as our preprocessor in code will have a chance to detect it.
+
+So normal flow in compilation is `gcc ssebench.c -o ssebench`, and another with `gcc ssebench.c -O2 -o ssebench-optimized`  
 
 Then execute it one by one
 
@@ -33,27 +41,27 @@ then
 
 `./ssebench-optimized > ssebench-optimized.txt`
 
+then repeat with AVX via `gcc ssebench.c -o ssebench-avx -mavx`, and anothe with `gcc ssebench.c -O2 -o ssebench-avx-optimized -mavx`, and collect the result with the same steps but different executable file and output to relevant .txt files to collect result later.
+
 Result has 4 columns in each line for its execution time for
 
-<initialization **without** SSE> <initialization **with** SSE> <math operations **without** SSE> <math operations **with** SSE>
+<initialization **without** SSE/AVX> <initialization **with** SSE/AVX> <math operations **without** SSE/AVX> <math operations **with** SSE/AVX>
 
 I average the result by using `awk '{s+=$1} END {print s/100}'` to get average of numbers in first column, then change `$1` to `$2` to get average for second column for initialization with SSE, and so on.
 
-# Result
+# Automated Script
 
-Results are as following
+Above in section _Build & Collect Result_ is automated in provided bash script `collect.sh`. The script will build relevant program, execute it and collect result.
 
-Without compiler's optimization flags
-* Initialization **without** SSE => 21.7788 ms
-* Initialization **with** SSE => 8.05029 ms
-* Math operations **without** SSE => 26.9069 ms
-* Math operations **with** SSE => 21.1805 ms
+Execute the script with `bash collect.sh`.
 
-With compiler's optimization flags (`-O2`)
-* Initialization **without** SSE => 4.42866 ms
-* Initialization **with** SSE => 4.27777 ms
-* Math operations **without** SSE => 6.56853 ms
-* Math operations **with** SSE => 6.62412 ms
+It will finally summarize the results for test cases.
+
+# Result (as collected on my testing)
+
+Results as collected via `bash collect.sh`.
+
+![result](https://github.com/haxpor/sse-bench/blob/master/result.png)
 
 # Testing Machine
 

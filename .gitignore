@@ -1,0 +1,8 @@
+sse.txt
+sse-optimized.txt
+avx.txt
+avx-optimized.txt
+sse
+sse-optimized
+avx
+avx-optimized

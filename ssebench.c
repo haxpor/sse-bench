@@ -1,12 +1,13 @@
-/// Experiment 1: with SIMD via SSE to initialize all element of float array of size SIZE.
+/// Experiment 1: with SIMD via either AVX or SSE (prefered AVX) to initialize all element of float array of size SIZE.
 /// Experiment 2: do math operations initialized buff with float[4] (with arbitrary values) then store back results into buff.
 ///               math opeations are 'buff[i] = sqrtf(buff[i] * MUL_VAL) + ADD_VAL' in which buff is our buffer, i is index, MUL_VAL is multiplier value
 ///               and ADD_VAL is additional value. The latter twos will be in vector for case of SSE operation.  
 ///
 /// Notice malloc16() and free16() to help in allocate aligned memory, and free.
+/// Interchange keyterm, if mention about SSE, that means AVX/SSE.
 ///
 /// Output from program has 4 columns in fixed-point number
-/// <initialize without SSE> <initialize with SSE> <math operations without SSE> <math operation with SSE>
+/// <initialize without SSE/AVX> <initialize with SSE/AVX> <math operations without SSE/AVX> <math operation with SSE/AVX>
 ///
 /// Result
 /// Interesting to see that if compile without optimization flag, SSE code perform better relatively!
@@ -18,16 +19,37 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#if defined( __SSE__ ) || defined( __SSE2__ )
+#include <time.h>
+#if defined( __AVX__ )
+#define HAS_AVX
+#include <immintrin.h>
+#elif defined( __SSE__ ) || defined( __SSE2__ )
 #define HAS_SSE
 #include <xmmintrin.h>
 #endif
 
-#include <time.h>
+#ifdef __AVX__
+#define MEMALIGN __attribute((aligned(32)))
+#elif defined( __SSE__ ) || defined( __SSE2__ )
+#define MEMALIGN __attribute((aligned(16)))
+#else
+#define MEMALIGN
+#endif
 
-#define SIZE 10000004
+#define SIZE 10000008
 #define BENCH_ITERATION 100
 
+#ifdef __AVX__
+// values used to set for benchmark 1
+#define SET_VAL 1.f
+#define OPTIMIZED_SET_VAL {1.f, 1.f, 1.f, 1.f,1.f, 1.f, 1.f, 1.f}
+// values used as multiplier for benchmark 2
+#define MUL_VAL 6.5f
+#define OPTIMIZED_MUL_VAL {6.5f, 6.5f, 6.5f, 6.5f,6.5f, 6.5f, 6.5f, 6.5f}
+// values used as additional for benchmark 2
+#define ADD_VAL 100.f
+#define OPTIMIZED_ADD_VAL {100.f, 100.f, 100.f, 100.f,100.f, 100.f, 100.f, 100.f}
+#elif defined( __SSE__) || defined( __SSE2__)
 // values used to set for benchmark 1
 #define SET_VAL 1.f
 #define OPTIMIZED_SET_VAL {1.f, 1.f, 1.f, 1.f}
@@ -37,6 +59,14 @@
 // values used as additional for benchmark 2
 #define ADD_VAL 100.f
 #define OPTIMIZED_ADD_VAL {100.f, 100.f, 100.f, 100.f}
+#else
+// values used to set for benchmark 1
+#define SET_VAL 1.f
+// values used as multiplier for benchmark 2
+#define MUL_VAL 6.5f
+// values used as additional for benchmark 2
+#define ADD_VAL 100.f
+#endif
 
 // concept for allocating aligned memory space
 // overflow it, then turncate the lower bits
@@ -99,19 +129,31 @@ void benchmark(float* buff, size_t size)
   }
   printf("%.8lf ", (double)(clock() - begin) / CLOCKS_PER_SEC * 1000.0);
   
+#ifdef __AVX__
+  // - avx
+  // this need to be aligned 16-bytes for SSE
+  MEMALIGN const float aligned_set_vals[8] = OPTIMIZED_SET_VAL;
+  MEMALIGN __m256 set_values = _mm256_load_ps(aligned_set_vals);
+  begin = clock();
+  for (int i=0; i<size; i+=8)
+  {
+    _mm256_store_ps(buff + i, set_values);
+  }
+  printf("%.8lf ", (double)(clock() - begin) / CLOCKS_PER_SEC * 1000.0);
+
+#elif defined( __SSE__ ) || defined( __SSE2__)
   // - sse
   // this need to be aligned 16-bytes for SSE
-  __attribute((aligned(16))) const float aligned_set_vals[4] = OPTIMIZED_SET_VAL;
-  __m128 set_values = _mm_load_ps(aligned_set_vals);
+  MEMALIGN const float aligned_set_vals[4] = OPTIMIZED_SET_VAL;
+  MEMALIGN __m128 set_values = _mm_load_ps(aligned_set_vals);
   begin = clock();
   for (int i=0; i<size; i+=4)
   {
-    //_mm_store_ps(&buff[i], set_values);
-    // or possible as well with the following line
     _mm_store_ps(buff + i, set_values);
-    //_mm_store_ps((float*)((size_t)buff + i*sizeof(float)), set_values);
   }
   printf("%.8lf ", (double)(clock() - begin) / CLOCKS_PER_SEC * 1000.0);
+
+#endif
 
   // benchmark 2 - multiply and store back
   // - manual
@@ -128,31 +170,53 @@ void benchmark(float* buff, size_t size)
     buff[i] = SET_VAL;
   }
 
-  // - sse
+#ifdef __AVX__
+  // - avx
   // load and cache multiplier values
-  __attribute((aligned(16))) const float aligned_mul_vals[4] = OPTIMIZED_MUL_VAL;
-  __attribute((aligned(16))) __m128 mul_values = _mm_load_ps(aligned_mul_vals);
+  MEMALIGN const float aligned_mul_vals[8] = OPTIMIZED_MUL_VAL;
+  MEMALIGN __m256 mul_values = _mm256_load_ps(aligned_mul_vals);
 
   // load and cache addition values
-  __attribute((aligned(16))) const float aligned_add_vals[4] = OPTIMIZED_ADD_VAL;
-  __attribute((aligned(16))) __m128 add_values = _mm_load_ps(aligned_add_vals);
+  MEMALIGN const float aligned_add_vals[8] = OPTIMIZED_ADD_VAL;
+  MEMALIGN __m256 add_values = _mm256_load_ps(aligned_add_vals);
 
-  __m128 load_vals, temp_vals;
+  MEMALIGN __m256 load_vals;
+  begin = clock();
+  for (int i=0; i<size; i+=8)
+  {
+    // load 8 elements each time
+    load_vals = _mm256_load_ps(buff + i);
+    // do operations then store back to buff
+    _mm256_store_ps(buff + i, _mm256_add_ps(_mm256_sqrt_ps(_mm256_mul_ps(load_vals, mul_values)), add_values));
+  }
+  printf("%.8lf\n", (double)(clock() - begin) / CLOCKS_PER_SEC * 1000.0);
+#elif defined( __SSE__) || defined( __SSE2__)
+  // - sse
+  // load and cache multiplier values
+  MEMALIGN const float aligned_mul_vals[4] = OPTIMIZED_MUL_VAL;
+  MEMALIGN __m128 mul_values = _mm_load_ps(aligned_mul_vals);
+
+  // load and cache addition values
+  MEMALIGN const float aligned_add_vals[4] = OPTIMIZED_ADD_VAL;
+  MEMALIGN __m128 add_values = _mm_load_ps(aligned_add_vals);
+
+  MEMALIGN __m128 load_vals;
   begin = clock();
   for (int i=0; i<size; i+=4)
   {
     // load 4 elements each time
-    load_vals = _mm_load_ps(&buff[i]);
+    load_vals = _mm_load_ps(buff + i);
     // do operations then store back to buff
-    _mm_store_ps(&buff[i], _mm_add_ps(_mm_sqrt_ps(_mm_mul_ps(load_vals, mul_values)), add_values));
+    _mm_store_ps(buff + i, _mm_add_ps(_mm_sqrt_ps(_mm_mul_ps(load_vals, mul_values)), add_values));
   }
   printf("%.8lf\n", (double)(clock() - begin) / CLOCKS_PER_SEC * 1000.0);
+#endif
 }
 
 int main (int argc, char* argv[])
 {
-#ifndef HAS_SSE
-  fprintf(stderr, "Your machine doesn't have SSE/SSE2 support\n");
+#if !defined(HAS_AVX) && !defined(HAS_SSE)
+  fprintf(stderr, "Your machine doesn't support either AVX or SSE\n");
   return -1;
 #else
   // allocate 16-byte aligned memory space
