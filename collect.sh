@@ -6,23 +6,29 @@ ITERATION=100
 # measure total time elapsed
 STARTTIME=`date +%s`
 
+# check additional compilation flags
+OSTYPE=`uname -s`
+if [[ "$OSTYPE" == "Linux" ]]; then
+  LFLAGS="-lm"
+fi
+
 # SSE
 # compile (without optimization)
 echo "building SSE wo/ optimization"
-gcc ssebench.c -o sse
+gcc ssebench.c -o sse $LFLAGS
 
 # compile (with optimization)
 echo "building SSE w/ optimization"
-gcc ssebench.c -O2 -o sse-optimized
+gcc ssebench.c -O2 -o sse-optimized $LFLAGS
 
 # AVX
 # compile (without optimization)
 echo "building AVX wo/ optimization"
-gcc ssebench.c -mavx -o avx
+gcc ssebench.c -mavx -o avx $LFLAGS
 
 # compile (with AVX)
 echo "building AVX w/ optimization"
-gcc ssebench.c -mavx -O2 -o avx-optimized
+gcc ssebench.c -mavx -O2 -o avx-optimized $LFLAGS
 
 # execute and write into txt files
 echo "executing SSE"
